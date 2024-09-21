@@ -60,7 +60,7 @@ fn bracket_parse<'a>(function: &[char]) -> Result<usize, &'a str>{
     }return Result::Err("no closing paratheses!")
 }
 
-fn number_parse<'a>(function: &[char]) -> Result<(f32, usize), &'a str>{
+pub fn number_parse<'a>(function: &[char]) -> Result<(f32, usize), &'a str>{
     let mut full_number: f32 = 0.0;
     let mut decimal: Option<i32> = None;
 
@@ -68,7 +68,7 @@ fn number_parse<'a>(function: &[char]) -> Result<(f32, usize), &'a str>{
         match function[c].to_digit(10){
             
             Some(digit) => {
-                full_number += digit as f32 / (10.0 as f32).powf(c as f32)
+                full_number += digit as f32 / (10.0 as f32).powf(c as f32 - (if decimal.is_some(){1.0}else{0.0}))
             }
 
             None =>  {
@@ -82,7 +82,7 @@ fn number_parse<'a>(function: &[char]) -> Result<(f32, usize), &'a str>{
 
                 //we have found the end of the number
                 else {
-                    decimal *= 
+                    full_number *= (10.0 as f32).powf(c as f32 - decimal.unwrap() as f32);
                     return Result::Ok((full_number, c))
                 }
             }
