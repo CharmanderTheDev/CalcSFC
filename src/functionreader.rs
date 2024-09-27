@@ -64,7 +64,8 @@ pub fn number_parse<'a>(function: &[char]) -> Result<(f32, usize), &'a str>{
     let mut full_number: f32 = 0.0;
     let mut decimal: Option<i32> = None;
 
-    for c in 0..function.len(){
+    let mut c: usize = 0;
+    for _ in 0..function.len(){
         match function[c].to_digit(10){
             
             Some(digit) => {
@@ -82,10 +83,14 @@ pub fn number_parse<'a>(function: &[char]) -> Result<(f32, usize), &'a str>{
 
                 //we have found the end of the number
                 else {
-                    full_number *= (10.0 as f32).powf(c as f32 - decimal.unwrap() as f32);
+                    full_number *= (10.0 as f32).powf(match decimal{None=>1,Some(i)=>i} as f32 - 1.0);
                     return Result::Ok((full_number, c))
                 }
             }
         }
-    }return Result::Err("unidentified number parse error")
+    c+=1;
+    }
+
+    full_number *= (10.0 as f32).powf(match decimal{None=>1,Some(i)=>i} as f32 - 1.0);
+    return Result::Ok((full_number, c));
 }
