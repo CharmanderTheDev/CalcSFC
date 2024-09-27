@@ -83,7 +83,7 @@ pub fn number_parse<'a>(function: &[char]) -> Result<(f32, usize), &'a str>{
 
                 //we have found the end of the number
                 else {
-                    full_number *= (10.0 as f32).powf(match decimal{None=>1,Some(i)=>i} as f32 - 1.0);
+                    full_number *= (10.0 as f32).powf(match decimal{None=>c as i32,Some(i)=>i} as f32 - 1.0);
                     return Result::Ok((full_number, c))
                 }
             }
@@ -91,6 +91,6 @@ pub fn number_parse<'a>(function: &[char]) -> Result<(f32, usize), &'a str>{
     c+=1;
     }
 
-    full_number *= (10.0 as f32).powf(match decimal{None=>1,Some(i)=>i} as f32 - 1.0);
+    full_number *= (10.0 as f32).powf(match decimal{None=>c as i32,Some(i)=>i} as f32 - 1.0);
     return Result::Ok((full_number, c));
 }
