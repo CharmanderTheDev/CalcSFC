@@ -1,6 +1,15 @@
 use std::num;
 
-pub fn read_function<'a>(function: &[char], input: f32) -> Result<f32, &'a str>{
+enum Operand {
+    PLUS,
+    MINUS,
+    TIMES,
+    TIMESA,
+    EXPONENT,
+    DIVIDE,
+}
+
+pub fn read_function<'a>(function: &[char], input: f64) -> Result<f64, String>{
 
     //find the first component of an operation
     let first_operator = match function[0] {
@@ -8,40 +17,75 @@ pub fn read_function<'a>(function: &[char], input: f32) -> Result<f32, &'a str>{
         //if it's an open bracket, we find the corresponding closing bracket and process the subfunction within
         '(' => {
             let c = bracket_parse(&function).unwrap();
-            read_function(&function[1..c], input).unwrap()
+            (read_function(&function[1..c+1], input).unwrap(), c)
         },
 
         //this part looks for single-argument operators, or functions, which are
-        //(in this program) limited to sqrt, sin, cos, and tan.
-        's'|'c'|'t' => {
-            if function[1..5] == ['q','r','t','('] {
-                let c = bracket_parse(&function[5..]).unwrap();
-                f32::sqrt(read_function(&function[5..c], input).unwrap())
+        //(in this program) limited to sqrt, sin, cos, tan, and abs. more may be
+        //added later
+        's'|'c'|'t'|'a' => {
+            if function[1..6] == ['q','r','t','('] {
+                let c = bracket_parse(&function[4..]).unwrap();
+                (f64::sqrt(read_function(&function[4..c], input).unwrap()), c)
 
-            }else if function[1..3] == ['i','n','('] {
-                let c = bracket_parse(&function[4..]).unwrap();
-                f32::sin(read_function(&function[4..c],input).unwrap())
+            }else if function[1..4] == ['i','n','('] {
+                let c = bracket_parse(&function[3..]).unwrap() + 3;
+                (f64::sin(read_function(&function[3..c+1],input).unwrap()), c)
             
-            }else if function[1..3] == ['o','s','('] {
-                let c = bracket_parse(&function[4..]).unwrap();
-                f32::cos(read_function(&function[4..c],input).unwrap())
+            }else if function[1..4] == ['o','s','('] {
+                let c = bracket_parse(&function[3..]).unwrap();
+                (f64::cos(read_function(&function[3..c],input).unwrap()), c)
             
-            }else if function[1..3] == ['a','n','('] {
-                let c = bracket_parse(&function[4..]).unwrap();
-                f32::tan(read_function(&function[4..c],input).unwrap())
+            }else if function[1..4] == ['a','n','('] {
+                let c = bracket_parse(&function[3..]).unwrap();
+                (f64::tan(read_function(&function[3..c],input).unwrap()), c)
+
+            }else if function[1..4] == ['b','s','('] {
+                let c = bracket_parse(&function[3..]).unwrap();
+                (f64::abs(read_function(&function[3..c],input).unwrap()), c)
             }
             
             else{return Result::Err("error: function not recognized. This program
-            only recognizes sqrt(), sin(), cos() and tan()")}
+            only recognizes sqrt(), sin(), cos(), tan(), and abs()".to_string())}
         }
+
+        '0'|'1'|'2'|'3'|'4'|'5'|'6'|'7'|'8'|'9'|'.' => {
+            number_parse(&function).unwrap()
+        }
+
+        'x'=>(input,1),
         
-        _ => return Result::Err("starting character not recognized")        
+        _ => return Result::Err("starting character '".to_owned() + &function[0].to_string() + &"' not recognized")
     };
 
-    return Result::Err("unidentified error")
+    if first_operator.1 == function.len() - 1 {return Ok(first_operator.0)}
+
+    let operand = match function[first_operator.1] {
+        '+'=>Operand::PLUS,
+        '-'=>Operand::MINUS,
+        '/'=>Operand::DIVIDE,
+        '*'=>Operand::TIMESA,
+        '^'=>Operand::EXPONENT,
+        _=>Operand::TIMES,
+    };
+
+    let second_operator = read_function(&function[first_operator.1+match operand {Operand::TIMES=>0,_=>1}..], input).unwrap();
+
+    return Ok(match operand {
+        Operand::PLUS => first_operator.0 + second_operator,
+        Operand::MINUS => first_operator.0 - second_operator,
+        Operand::DIVIDE => first_operator.0 / second_operator,
+        Operand::EXPONENT => first_operator.0.powf(second_operator),
+        _=> first_operator.0 * second_operator,
+    });
+
+
+
+    //return Ok(first_operator.0);
+    return Result::Err("unidentified error".to_string())
 }
 
-fn bracket_parse<'a>(function: &[char]) -> Result<usize, &'a str>{
+pub fn bracket_parse<'a>(function: &[char]) -> Result<usize, &'a str>{
     let mut bracket_number = 0;
     for c in 0..function.len() {
         
@@ -60,8 +104,8 @@ fn bracket_parse<'a>(function: &[char]) -> Result<usize, &'a str>{
     }return Result::Err("no closing paratheses!")
 }
 
-pub fn number_parse<'a>(function: &[char]) -> Result<(f32, usize), &'a str>{
-    let mut full_number: f32 = 0.0;
+pub fn number_parse<'a>(function: &[char]) -> Result<(f64, usize), &'a str>{
+    let mut full_number: f64 = 0.0;
     let mut decimal: Option<i32> = None;
 
     let mut c: usize = 0;
@@ -69,7 +113,7 @@ pub fn number_parse<'a>(function: &[char]) -> Result<(f32, usize), &'a str>{
         match function[c].to_digit(10){
             
             Some(digit) => {
-                full_number += digit as f32 / (10.0 as f32).powf(c as f32 - (if decimal.is_some(){1.0}else{0.0}))
+                full_number += digit as f64 / (10.0 as f64).powf(c as f64 - (if decimal.is_some(){1.0}else{0.0}))
             }
 
             None =>  {
@@ -83,7 +127,7 @@ pub fn number_parse<'a>(function: &[char]) -> Result<(f32, usize), &'a str>{
 
                 //we have found the end of the number
                 else {
-                    full_number *= (10.0 as f32).powf(match decimal{None=>c as i32,Some(i)=>i} as f32 - 1.0);
+                    full_number *= (10.0 as f64).powf(match decimal{None=>c as i32,Some(i)=>i} as f64 - 1.0);
                     return Result::Ok((full_number, c))
                 }
             }
@@ -91,6 +135,6 @@ pub fn number_parse<'a>(function: &[char]) -> Result<(f32, usize), &'a str>{
     c+=1;
     }
 
-    full_number *= (10.0 as f32).powf(match decimal{None=>c as i32,Some(i)=>i} as f32 - 1.0);
+    full_number *= (10.0 as f64).powf(match decimal{None=>c as i32,Some(i)=>i} as f64 - 1.0);
     return Result::Ok((full_number, c));
 }
